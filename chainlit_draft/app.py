@@ -2,12 +2,29 @@ from openai import AzureOpenAI
 import chainlit as cl
 import os
 from dotenv import find_dotenv, load_dotenv
+from chainlit.input_widget import Select
 
 load_dotenv(find_dotenv())
 
 
 @cl.on_chat_start
 async def start_chat():
+    # Set up settings with the Select widget
+    await cl.ChatSettings(
+        [
+            Select(
+                id="chatbot_language",
+                label="Selectați limba chatbot-ului",
+                values=["ro", "en", "fr"],
+                initial_index=0,
+                tooltip="Alege limba în care chatbot-ul va răspunde",
+            )
+        ]
+    ).send()
+
+    # Set default language from initial_index
+    cl.user_session.set("language", "ro")  # Default to first option
+
     cl.user_session.set(
         "client",
         AzureOpenAI(
@@ -18,30 +35,51 @@ async def start_chat():
     )
     cl.user_session.set("chat_history", [])
 
-    # Send a welcome message with a reset button
+    language = cl.user_session.get("language", "ro")
+    language_labels = {"ro": "română", "en": "engleză", "fr": "franceză"}
+
     await cl.Message(
-        content="👋 Bun venit! Întreabă-mă orice și voi răspunde în română.",
+        content=f"👋 Bun venit! Întreabă-mă orice și voi răspunde în {language_labels[language]}. Poți schimba limba din setări.",
         actions=[
-            cl.Action(name="reset", value="reset", label="🔄 Resetează conversația", payload={}),
+            cl.Action(
+                name="reset",
+                value="reset",
+                label="🔄 Resetează conversația",
+                payload={},
+            ),
         ],
+    ).send()
+
+
+# Add this callback to handle language selection
+@cl.on_settings_update
+async def setup_agent(settings):
+    language = settings["chatbot_language"]
+    cl.user_session.set("language", language)
+
+    language_labels = {"ro": "română", "en": "engleză", "fr": "franceză"}
+    await cl.Message(
+        content=f"✅ Limba a fost schimbată în {language_labels[language]}."
     ).send()
 
 
 @cl.on_message
 async def handle_message(message: cl.Message):
     msg = cl.Message(content="")
+    language = cl.user_session.get("language", "ro")
+    system_prompt = {
+        "ro": "Răspunde în limba română.",
+        "en": "Respond in English.",
+        "fr": "Réponds en français.",
+    }
 
     chat_history = cl.user_session.get("chat_history", [])
     chat_history.append({"role": "user", "content": f"QUESTION: {message.content}"})
 
     response = cl.user_session.get("client").chat.completions.create(
         model="gpt-4o-mini",
-        # messages=[{"role": m["role"], "content": m["content"]} for m in chat_history],
         messages=[
-            {
-                "role": "system",
-                "content": "Răspunde întotdeauna în limba română, indiferent de întrebarea utilizatorului.",
-            },
+            {"role": "system", "content": system_prompt[language]},
             *[{"role": m["role"], "content": m["content"]} for m in chat_history],
         ],
         stream=True,
@@ -65,3 +103,4 @@ async def handle_message(message: cl.Message):
 async def on_reset(action: cl.Action):
     cl.user_session.set("chat_history", [])
     await cl.Message(content="✅ Conversația a fost resetată. Întreabă din nou!").send()
+
