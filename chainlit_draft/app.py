@@ -18,6 +18,14 @@ async def start_chat():
     )
     cl.user_session.set("chat_history", [])
 
+    # Send a welcome message with a reset button
+    await cl.Message(
+        content="👋 Bun venit! Întreabă-mă orice și voi răspunde în română.",
+        actions=[
+            cl.Action(name="reset", value="reset", label="🔄 Resetează conversația", payload={}),
+        ],
+    ).send()
+
 
 @cl.on_message
 async def handle_message(message: cl.Message):
@@ -50,3 +58,10 @@ async def handle_message(message: cl.Message):
     chat_history.append({"role": "assistant", "content": msg.content})
     cl.user_session.set("chat_history", chat_history)
     await msg.update()
+
+
+# Handle reset button
+@cl.action_callback("reset")
+async def on_reset(action: cl.Action):
+    cl.user_session.set("chat_history", [])
+    await cl.Message(content="✅ Conversația a fost resetată. Întreabă din nou!").send()
