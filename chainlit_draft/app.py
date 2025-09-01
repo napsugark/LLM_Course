@@ -9,7 +9,7 @@ load_dotenv(find_dotenv())
 
 @cl.on_chat_start
 async def start_chat():
-    # Set up settings with the Select widget
+
     await cl.ChatSettings(
         [
             Select(
@@ -31,8 +31,7 @@ async def start_chat():
         ]
     ).send()
 
-    # Set default language from initial_index
-    cl.user_session.set("language", "ro")  # Default to first option
+    cl.user_session.set("language", "ro")  
     cl.user_session.set("temperature", 0.7)
 
     cl.user_session.set(
@@ -60,8 +59,6 @@ async def start_chat():
         ],
     ).send()
 
-
-# Add this callback to handle language selection
 @cl.on_settings_update
 async def setup_agent(settings):
     language = settings["chatbot_language"]
@@ -106,14 +103,12 @@ async def handle_message(message: cl.Message):
         delta = chunk.choices[0].delta.content or ""
         await msg.stream_token(delta)
 
-    # Update chat history
     chat_history.append({"role": "user", "content": message.content})
     chat_history.append({"role": "assistant", "content": msg.content})
     cl.user_session.set("chat_history", chat_history)
     await msg.update()
 
 
-# Handle reset button
 @cl.action_callback("reset")
 async def on_reset(action: cl.Action):
     cl.user_session.set("chat_history", [])
