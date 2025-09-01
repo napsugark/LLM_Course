@@ -2,7 +2,7 @@ from openai import AzureOpenAI
 import chainlit as cl
 import os
 from dotenv import find_dotenv, load_dotenv
-from chainlit.input_widget import Select
+from chainlit.input_widget import Select, Slider
 
 load_dotenv(find_dotenv())
 
@@ -18,12 +18,22 @@ async def start_chat():
                 values=["ro", "en", "fr"],
                 initial_index=0,
                 tooltip="Alege limba în care chatbot-ul va răspunde",
-            )
+            ),
+            Slider(
+                id="temperature",
+                label="Temperatura",
+                initial=0.7,
+                min=0.0,
+                max=2.0,
+                step=0.1,
+                tooltip="Controlează creativitatea răspunsurilor (0.0 = conservator, 2.0 = foarte creativ)",
+            ),
         ]
     ).send()
 
     # Set default language from initial_index
     cl.user_session.set("language", "ro")  # Default to first option
+    cl.user_session.set("temperature", 0.7)
 
     cl.user_session.set(
         "client",
@@ -55,7 +65,10 @@ async def start_chat():
 @cl.on_settings_update
 async def setup_agent(settings):
     language = settings["chatbot_language"]
+    temperature = settings["temperature"]
+
     cl.user_session.set("language", language)
+    cl.user_session.set("temperature", temperature)
 
     language_labels = {"ro": "română", "en": "engleză", "fr": "franceză"}
     await cl.Message(
@@ -67,6 +80,7 @@ async def setup_agent(settings):
 async def handle_message(message: cl.Message):
     msg = cl.Message(content="")
     language = cl.user_session.get("language", "ro")
+    temperature = cl.user_session.get("temperature", 0.7)
     system_prompt = {
         "ro": "Răspunde în limba română.",
         "en": "Respond in English.",
@@ -78,6 +92,7 @@ async def handle_message(message: cl.Message):
 
     response = cl.user_session.get("client").chat.completions.create(
         model="gpt-4o-mini",
+        temperature=temperature,
         messages=[
             {"role": "system", "content": system_prompt[language]},
             *[{"role": m["role"], "content": m["content"]} for m in chat_history],
