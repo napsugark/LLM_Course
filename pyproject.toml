@@ -20,7 +20,8 @@ dependencies = [
     "qdrant-client (>=1.15.1,<2.0.0)",
     "langchain-qdrant (>=0.2.0,<0.3.0)",
     "langchain-core (>=0.3.75,<0.4.0)",
-    "chainlit (>=2.7.2,<3.0.0)"
+    "chainlit (>=2.7.2,<3.0.0)",
+    "langfuse (>=3.4.0,<4.0.0)"
 ]
 
 package-mode = false
